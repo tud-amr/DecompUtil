@@ -54,36 +54,48 @@ public:
    return constraints;
  }
 
- /**
-  * @brief Decomposition thread
-  * @param path The path to dilate
-  * @param offset_x offset added to the long semi-axis, default is 0
-  */
- void dilate(const vec_Vecf<Dim> &path, double offset_x = 0) {
-   const unsigned int N = path.size() - 1;
-   lines_.resize(N);
-   ellipsoids_.resize(N);
-   polyhedrons_.resize(N);
+/**
+* @brief Decomposition thread
+* @param path The path to dilate
+* @param offset_x Offset added to the long semi-axis, default is 0
+* @param is_path_circle Indicator that path only consists of sets of two path elements giving line segments, so line segments are not constructed between every path segment
+*/
+void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_only = false) {
+  is_path_circle_only_ = is_path_circle_only;
 
-   for (unsigned int i = 0; i < N; i++) {
-     lines_[i] = std::make_shared<LineSegment<Dim>>(path[i], path[i+1]);
-     lines_[i]->set_local_bbox(local_bbox_);
-     lines_[i]->set_obs(obs_);
-     lines_[i]->dilate(offset_x);
+  const unsigned int n_path = path.size();
+  unsigned int n_segments = n_path-1;
+  if (is_path_circle_only_) n_segments = n_path/2;
 
-     ellipsoids_[i] = lines_[i]->get_ellipsoid();
-     polyhedrons_[i] = lines_[i]->get_polyhedron();
-   }
+  lines_.resize(n_segments);
+  ellipsoids_.resize(n_segments);
+  polyhedrons_.resize(n_segments);
 
+  // Create line segments and corresponding ellipsoids and polyhedrons based on a path with ellipsoidal and circular elements
+  unsigned int idx_path = 0;
+  for (unsigned int i = 0; i < n_segments; i++) {
+    // Add line segment
+    lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
+    lines_[i]->set_local_bbox(local_bbox_);
+    lines_[i]->set_obs(obs_);
+    lines_[i]->dilate(offset_x);
 
-   path_ = path;
+    // Calculate polyhedron
+    ellipsoids_[i] = lines_[i]->get_ellipsoid();
+    polyhedrons_[i] = lines_[i]->get_polyhedron();
 
-   if(global_bbox_min_.norm() != 0 || global_bbox_max_.norm() != 0) {
-     for(auto& it: polyhedrons_)
-       add_global_bbox(it);
-   }
+    // Update idx_path (extra increase in case of circular elements)
+    if (is_path_circle_only_) idx_path++;
+    idx_path++;
+  }
 
- }
+  path_ = path;
+
+  if (global_bbox_min_.norm() != 0 || global_bbox_max_.norm() != 0) {
+    for(auto& it: polyhedrons_)
+      add_global_bbox(it);
+  }
+}
 
 protected:
  template<int U = Dim>
@@ -116,6 +128,7 @@ protected:
    }
 
  vec_Vecf<Dim> path_;
+ bool is_path_circle_only_;
  vec_Vecf<Dim> obs_;
 
  vec_E<Ellipsoid<Dim>> ellipsoids_;
