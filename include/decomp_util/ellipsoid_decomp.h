@@ -34,6 +34,25 @@ public:
  ///Set dimension of bounding box
  void set_local_bbox(const Vecf<Dim>& bbox) { local_bbox_ = bbox; }
 
+ //Tighten polyhedron with robot radius
+ void tighten_polyhedron(const size_t i, const Vecf<Dim> p0, const decimal_t radius)
+ {
+  for (unsigned int j = 0; j < polyhedrons_[i].vs_.size(); j++) {
+    // Determine direction of normal vector and sign of constant in linear constraint (similar to LinearConstraint constructor)
+    auto n = polyhedrons_[i].vs_[j].n_;
+    decimal_t c = polyhedrons_[i].vs_[j].p_.dot(n);
+    if (n.dot(p0) - c > 0) {
+      n = -n;
+      c = -c;
+    }
+    // Normalize normal vector
+    n = n.normalized();
+
+    // Tighten constraint by robot radius
+    polyhedrons_[i].vs_[j].p_ = polyhedrons_[i].vs_[j].p_ - radius*n;
+  }
+ }
+
  ///Get the path that is used for dilation
  vec_Vecf<Dim> get_path() const { return path_; }
 
