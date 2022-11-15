@@ -34,22 +34,61 @@ public:
  ///Set dimension of bounding box
  void set_local_bbox(const Vecf<Dim>& bbox) { local_bbox_ = bbox; }
 
- //Tighten polyhedron with robot radius
- void tighten_polyhedron(const size_t i, const Vecf<Dim> p0, const decimal_t radius)
+ /**
+  * @brief Tighten polyhedron i with a specified distance seen from the perspective of a point inside the polyhedron
+  * 
+  * @param i Polyhedron index
+  * @param pt_inside Point inside the polyhedron
+  * @param distance Distance to tighten the polyhedron with
+  */
+ void tighten_polyhedron(const size_t i, const Vecf<Dim> pt_inside, const decimal_t distance)
  {
-  for (unsigned int j = 0; j < polyhedrons_[i].vs_.size(); j++) {
-    // Determine direction of normal vector and sign of constant in linear constraint (similar to LinearConstraint constructor)
-    auto n = polyhedrons_[i].vs_[j].n_;
-    decimal_t c = polyhedrons_[i].vs_[j].p_.dot(n);
-    if (n.dot(p0) - c > 0) {
-      n = -n;
-      c = -c;
-    }
-    // Normalize normal vector
-    n = n.normalized();
+    for (unsigned int j = 0; j < polyhedrons_[i].vs_.size(); j++)
+    {
+      // Determine direction of normal vector and sign of constant in linear constraint (similar to LinearConstraint constructor)
+      auto n = polyhedrons_[i].vs_[j].n_;
+      decimal_t c = polyhedrons_[i].vs_[j].p_.dot(n);
+      if (n.dot(pt_inside) - c > 0) {
+        n = -n;
+      }
+      // Normalize normal vector
+      n = n.normalized();
 
-    // Tighten constraint by robot radius
-    polyhedrons_[i].vs_[j].p_ = polyhedrons_[i].vs_[j].p_ - radius*n;
+      // Tighten constraint by specified distance
+      polyhedrons_[i].vs_[j].p_ = polyhedrons_[i].vs_[j].p_ - distance*n;
+    }
+ }
+
+ /**
+  * @brief Store the linear constraints corresponding to the calculated polyhedrons in an external vector
+  * 
+  * @param poly_constraints External linear constraints vector
+  * @param distance Distance to tighten the polyhedron constraints with
+  */
+ void set_constraints(std::vector<LinearConstraint<Dim>>& poly_constraints, const decimal_t distance = 0)
+ {
+  // Remove all previously stored constraints
+  poly_constraints.clear();
+
+  // Calculate and store new constraints
+  size_t idx_path = 0;
+  for (size_t i = 0; i < polyhedrons_.size(); i++)
+  {
+    // Create a point inside the polyhedron: on the corresponding line segment
+    const Vecf<Dim> pt_inside = (path_[idx_path] + path_[idx_path+1])/2;
+
+    // Tighten the constraints if indicated
+    if (distance > 0)
+    {
+      tighten_polyhedron(i, pt_inside, distance);
+    }
+
+    // Store polyhedron constraints
+    poly_constraints.push_back(LinearConstraint<Dim>(pt_inside, polyhedrons_[i].hyperplanes()));
+
+    // Update idx_path (extra increase in case of circular elements)
+    if (is_path_circle_only_) idx_path++;
+    idx_path++;
   }
  }
 
