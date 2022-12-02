@@ -43,20 +43,20 @@ public:
   */
  void tighten_polyhedron(const size_t i, const Vecf<Dim> pt_inside, const decimal_t distance)
  {
-    for (unsigned int j = 0; j < polyhedrons_[i].vs_.size(); j++)
-    {
-      // Determine direction of normal vector and sign of constant in linear constraint (similar to LinearConstraint constructor)
-      auto n = polyhedrons_[i].vs_[j].n_;
-      decimal_t c = polyhedrons_[i].vs_[j].p_.dot(n);
-      if (n.dot(pt_inside) - c > 0) {
-        n = -n;
-      }
-      // Normalize normal vector
-      n = n.normalized();
-
-      // Tighten constraint by specified distance
-      polyhedrons_[i].vs_[j].p_ = polyhedrons_[i].vs_[j].p_ - distance*n;
+  for (unsigned int j = 0; j < polyhedrons_[i].vs_.size(); j++)
+  {
+    // Determine direction of normal vector and sign of constant in linear constraint (similar to LinearConstraint constructor)
+    auto n = polyhedrons_[i].vs_[j].n_;
+    decimal_t c = polyhedrons_[i].vs_[j].p_.dot(n);
+    if (n.dot(pt_inside) - c > 0) {
+      n = -n;
     }
+    // Normalize normal vector
+    n = n.normalized();
+
+    // Tighten constraint by specified distance
+    polyhedrons_[i].vs_[j].p_ = polyhedrons_[i].vs_[j].p_ - distance*n;
+  }
  }
 
  /**
@@ -77,14 +77,14 @@ public:
     // Create a point inside the polyhedron: on the corresponding line segment
     const Vecf<Dim> pt_inside = (path_[idx_path] + path_[idx_path+1])/2;
 
-    // Tighten the constraints if indicated
+    // Store polyhedron constraints
+    poly_constraints.push_back(LinearConstraint<Dim>(pt_inside, polyhedrons_[i].hyperplanes(), distance));
+
+    // Tighten the constraints (to align with linear constraints)
     if (distance > 0)
     {
       tighten_polyhedron(i, pt_inside, distance);
     }
-
-    // Store polyhedron constraints
-    poly_constraints.push_back(LinearConstraint<Dim>(pt_inside, polyhedrons_[i].hyperplanes()));
 
     // Update idx_path (extra increase in case of circular elements)
     if (is_path_circle_only_) idx_path++;

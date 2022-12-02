@@ -106,7 +106,7 @@ struct LinearConstraint {
    * @param p0 point that is inside
    * @param vs hyperplane array, normal should go outside
    */
-	LinearConstraint(const Vecf<Dim> p0, const vec_E<Hyperplane<Dim>>& vs) {
+	LinearConstraint(const Vecf<Dim> p0, const vec_E<Hyperplane<Dim>>& vs, const decimal_t distance = 0) {
 		const unsigned int size = vs.size();
 		MatDNf<Dim> A(size, Dim);
 		VecDf b(size);
@@ -114,14 +114,26 @@ struct LinearConstraint {
 		for (unsigned int i = 0; i < size; i++) {
 			auto n = vs[i].n_;
 			decimal_t c = vs[i].p_.dot(n);
+
+      // Choose the correct side of the hyperplane
 			if (n.dot(p0) - c > 0) {
 				n = -n;
 				c = -c;
 			}
+
+      // Tighten constraints by distance, if nonzero
+      if (distance > 0)
+      {
+        n = n.normalized();
+        c = c - distance*n.dot(n);
+      }
+
+      // Store constraint
 			A.row(i) = n;
 			b(i) = c;
 		}
 
+    // Copy stored constraints to member variables
 		A_ = A;
 		b_ = b;
 	}
