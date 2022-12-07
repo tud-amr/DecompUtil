@@ -41,6 +41,11 @@
 #define ANSI_COLOR_RESET "\x1b[0m"
 #endif
 
+//Float tolerances
+#ifndef FLOAT_TOL
+#define FLOAT_TOL 1e-8
+#endif
+
 #ifndef DATA_TYPE_H
 #define DATA_TYPE_H
 /*! \brief Rename the float type used in lib

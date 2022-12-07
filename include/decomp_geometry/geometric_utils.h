@@ -126,6 +126,59 @@ inline vec_Vec2f cal_vertices(const Polyhedron2D &poly) {
   return vts_inside;
 }
 
+// Find extreme points of LinearConstraint2D (Ax <= b)
+inline vec_Vec2f cal_vertices(const LinearConstraint2D &con, const int n_relevent_constraints) {
+  vec_E<std::pair<Vec2f, Vec2f>> lines;
+  const auto A = con.A();
+  const auto b = con.b();
+  for (Eigen::Index l = 0; l < n_relevent_constraints; l++)
+  {
+    decimal_t A0 = A.row(l)[0];
+    decimal_t A1 = A.row(l)[1];
+
+    // Create constraint tangent line and normalize
+    Vec2f v(-A1, A0);
+    v = v.normalized();
+
+    // Calculate point on constraint line (with x=1)
+    Vec2f p;
+    if (abs(A0) < FLOAT_TOL && abs(A1+1) < FLOAT_TOL)
+    {
+      p[0] = 0;
+      p[1] = -b(l);
+    }
+    else if (abs(A0) < FLOAT_TOL && abs(A1-1) < FLOAT_TOL)
+    {
+      p[0] = 0;
+      p[1] = b(l);
+    }
+    else if (abs(A0+1) < FLOAT_TOL && abs(A1) < FLOAT_TOL)
+    {
+      p[0] = -b(l);
+      p[1] = 0;
+    }
+    else if (abs(A0-1) < FLOAT_TOL && abs(A1) < FLOAT_TOL)
+    {
+      p[0] = b(l);
+      p[1] = 0;
+    }
+    else
+    {
+      p[0] = 0;
+      p[1] = b(l)/A1;
+    }
+
+    // Create line from point and tangent line
+    lines.push_back(std::make_pair(v, p));
+  }
+
+  auto vts = line_intersects(lines);
+  vec_Vec2f vts_inside = con.points_inside(vts);
+  vts_inside = sort_pts(vts_inside);
+
+  return vts_inside;
+}
+
 /// Find extreme points of Polyhedron3D
 inline vec_E<vec_Vec3f> cal_vertices(const Polyhedron3D &poly) {
   vec_E<vec_Vec3f> bds;

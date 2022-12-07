@@ -138,11 +138,21 @@ struct LinearConstraint {
 		b_ = b;
 	}
 
+  /// Calculate points inside polyhedron, non-exclusive
+  vec_Vecf<Dim> points_inside(const vec_Vecf<Dim> &O) const {
+    vec_Vecf<Dim> new_O;
+    for (const auto &it : O) {
+      if (inside(it))
+        new_O.push_back(it);
+    }
+    return new_O;
+  }
+
   /// Check if the point is inside polyhedron using linear constraint
-  bool inside(const Vecf<Dim> &pt) {
+  bool inside(const Vecf<Dim> &pt) const {
     VecDf d = A_ * pt - b_;
     for (unsigned int i = 0; i < d.rows(); i++) {
-      if (d(i) > 0)
+      if (d(i) > FLOAT_TOL)
         return false;
     }
     return true;
