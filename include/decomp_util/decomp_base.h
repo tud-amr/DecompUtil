@@ -5,9 +5,10 @@
 #ifndef DECOMP_BASE_H
 #define DECOMP_BASE_H
 
-#include <decomp_geometry/ellipsoid.h>
-#include <decomp_geometry/polyhedron.h>
+#include <decomp_util/decomp_geometry/ellipsoid.h>
+#include <decomp_util/decomp_geometry/polyhedron.h>
 //#include <decomp_geometry/geometry_utils.h>
+#include <mpc_tools/instrumentation_timer.h>
 
 /**
  * @brief Line Segment Class
@@ -34,7 +35,10 @@ class DecompBase {
       // only consider points inside local bbox
       Polyhedron<Dim> vs;
       add_local_bbox(vs);
-      obs_ = vs.points_inside(obs);
+      {
+        PROFILE_SCOPE("points_inside");
+        obs_ = vs.points_inside(obs);
+      }
     }
 
     ///Get obstacel points

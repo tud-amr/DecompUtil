@@ -7,8 +7,8 @@
 #define DECOMP_ELLIPSOID_H
 
 #include <iostream>
-#include <decomp_basis/data_type.h>
-#include <decomp_geometry/polyhedron.h>
+#include <decomp_util/decomp_basis/data_type.h>
+#include <decomp_util/decomp_geometry/polyhedron.h>
 
 template <int Dim>
 struct Ellipsoid {

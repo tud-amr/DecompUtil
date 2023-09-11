@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <decomp_util/line_segment.h>
+#include <mpc_tools/instrumentation_timer.h>
 
 /**
  * @brief EllipsoidDecomp Class
@@ -78,7 +79,7 @@ public:
     const Vecf<Dim> pt_inside = (path_[idx_path] + path_[idx_path+1])/2;
 
     // Store polyhedron constraints
-    poly_constraints.push_back(LinearConstraint<Dim>(pt_inside, polyhedrons_[i].hyperplanes(), distance));
+    poly_constraints.emplace_back(LinearConstraint<Dim>(pt_inside, polyhedrons_[i].hyperplanes(), distance));
 
     // Tighten the constraints (to align with linear constraints)
     if (distance > 0)
@@ -120,7 +121,7 @@ public:
 */
 void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_only = false) {
   is_path_circle_only_ = is_path_circle_only;
-
+  PROFILE_FUNCTION();
   const unsigned int n_path = path.size();
   unsigned int n_segments = n_path-1;
   if (is_path_circle_only_) n_segments = n_path/2;
@@ -133,15 +134,31 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
   unsigned int idx_path = 0;
   for (unsigned int i = 0; i < n_segments; i++) {
     // Add line segment
-    lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
-    lines_[i]->set_local_bbox(local_bbox_);
-    lines_[i]->set_obs(obs_);
-    lines_[i]->dilate(offset_x);
+    {
+      PROFILE_SCOPE("set each line");
 
-    // Calculate polyhedron
-    ellipsoids_[i] = lines_[i]->get_ellipsoid();
-    polyhedrons_[i] = lines_[i]->get_polyhedron();
+      lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
+      {
+        PROFILE_SCOPE("set local boundingbox");
+        lines_[i]->set_local_bbox(local_bbox_);
 
+      }
+      lines_[i]->set_obs(obs_);
+
+    }
+
+    {
+      PROFILE_SCOPE("dilate line");
+      lines_[i]->dilate(offset_x);
+    }
+
+    
+    {
+      PROFILE_SCOPE("get poly");
+      // Calculate polyhedron
+      ellipsoids_[i] = lines_[i]->get_ellipsoid();
+      polyhedrons_[i] = lines_[i]->get_polyhedron();
+    }
     // Update idx_path (extra increase in case of circular elements)
     if (is_path_circle_only_) idx_path++;
     idx_path++;

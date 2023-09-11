@@ -6,7 +6,7 @@
 #ifndef DECOMP_POLYGON_H
 #define DECOMP_POLYGON_H
 
-#include <decomp_basis/data_type.h>
+#include <decomp_util/decomp_basis/data_type.h>
 
 ///Hyperplane class
 template <int Dim>

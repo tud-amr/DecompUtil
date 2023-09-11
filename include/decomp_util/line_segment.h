@@ -6,7 +6,8 @@
 #define LINE_SEGMENT_H
 
 #include <decomp_util/decomp_base.h>
-#include <decomp_geometry/geometric_utils.h>
+#include <decomp_util/decomp_geometry/geometric_utils.h>
+#include <mpc_tools/instrumentation_timer.h>
 
 /**
  * @brief Line Segment Class

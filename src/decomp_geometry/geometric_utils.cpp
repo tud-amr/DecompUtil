@@ -1,30 +1,22 @@
-/**
- * @file geometric_utils.h
- * @brief basic geometry utils
- */
-#ifndef DECOMP_GEOMETRIC_UTILS_H
-#define DECOMP_GEOMETRIC_UTILS_H
 
-#include <Eigen/Eigenvalues>
-#include <decomp_basis/data_utils.h>
-#include <decomp_geometry/polyhedron.h>
-#include <iostream>
 
-/// Calculate eigen values
-template <int Dim> Vecf<Dim> eigen_value(const Matf<Dim, Dim> &A) {
-  Eigen::SelfAdjointEigenSolver<Matf<Dim, Dim>> es(A);
-  return es.eigenvalues();
-}
+#include <decomp_util/decomp_geometry/geometric_utils.h>
+
+template Vecf<2> eigen_value(const Matf<2, 2> &A);
+template Vecf<3> eigen_value(const Matf<3, 3> &A);
+
 
 /// Calculate rotation matrix from a vector (aligned with x-axis)
-inline Mat2f vec2_to_rotation(const Vec2f &v) {
+Mat2f vec2_to_rotation(const Vec2f &v) 
+{
   decimal_t yaw = std::atan2(v(1), v(0));
   Mat2f R;
   R << cos(yaw), -sin(yaw), sin(yaw), cos(yaw);
   return R;
 }
 
-inline Mat3f vec3_to_rotation(const Vec3f &v) {
+Mat3f vec3_to_rotation(const Vec3f &v) 
+{
   // zero roll
   Vec3f rpy(0, std::atan2(-v(2), v.topRows<2>().norm()),
             std::atan2(v(1), v(0)));
@@ -35,7 +27,8 @@ inline Mat3f vec3_to_rotation(const Vec3f &v) {
 }
 
 /// Sort plannar points in the counter-clockwise order
-inline vec_Vec2f sort_pts(const vec_Vec2f &pts) {
+vec_Vec2f sort_pts(const vec_Vec2f &pts) 
+{
   /// if empty, dont sort
   if (pts.empty())
     return pts;
@@ -65,8 +58,9 @@ inline vec_Vec2f sort_pts(const vec_Vec2f &pts) {
 
 /// Find intersection between two lines on the same plane, return false if they
 /// are not intersected
-inline bool line_intersect(const std::pair<Vec2f, Vec2f> &v1,
-                           const std::pair<Vec2f, Vec2f> &v2, Vec2f &pi) {
+bool line_intersect(const std::pair<Vec2f, Vec2f> &v1,
+                           const std::pair<Vec2f, Vec2f> &v2, Vec2f &pi) 
+{
   decimal_t a1 = -v1.first(1);
   decimal_t b1 = v1.first(0);
   decimal_t c1 = a1 * v1.second(0) + b1 * v1.second(1);
@@ -87,7 +81,8 @@ inline bool line_intersect(const std::pair<Vec2f, Vec2f> &v1,
 }
 
 /// Find intersection between multiple lines
-inline vec_Vec2f line_intersects(const vec_E<std::pair<Vec2f, Vec2f>> &lines) {
+vec_Vec2f line_intersects(const vec_E<std::pair<Vec2f, Vec2f>> &lines) 
+{
   vec_Vec2f pts;
   for (unsigned int i = 0; i < lines.size(); i++) {
     for (unsigned int j = i + 1; j < lines.size(); j++) {
@@ -101,7 +96,8 @@ inline vec_Vec2f line_intersects(const vec_E<std::pair<Vec2f, Vec2f>> &lines) {
 }
 
 /// Find extreme points of Polyhedron2D
-inline vec_Vec2f cal_vertices(const Polyhedron2D &poly) {
+vec_Vec2f cal_vertices(const Polyhedron2D &poly) 
+{
   vec_E<std::pair<Vec2f, Vec2f>> lines;
   const auto vs = poly.hyperplanes();
   for (unsigned int i = 0; i < vs.size(); i++) {
@@ -127,7 +123,8 @@ inline vec_Vec2f cal_vertices(const Polyhedron2D &poly) {
 }
 
 // Find extreme points of LinearConstraint2D (Ax <= b)
-inline vec_Vec2f cal_vertices(const LinearConstraint2D &con, const int n_relevent_constraints) {
+vec_Vec2f cal_vertices(const LinearConstraint2D &con, const int n_relevent_constraints) 
+{
   vec_E<std::pair<Vec2f, Vec2f>> lines;
   const auto A = con.A();
   const auto b = con.b();
@@ -180,7 +177,8 @@ inline vec_Vec2f cal_vertices(const LinearConstraint2D &con, const int n_releven
 }
 
 /// Find extreme points of Polyhedron3D
-inline vec_E<vec_Vec3f> cal_vertices(const Polyhedron3D &poly) {
+vec_E<vec_Vec3f> cal_vertices(const Polyhedron3D &poly) 
+{
   vec_E<vec_Vec3f> bds;
   const auto vts = poly.hyperplanes();
   //**** for each plane, find lines on it
@@ -234,7 +232,8 @@ inline vec_E<vec_Vec3f> cal_vertices(const Polyhedron3D &poly) {
 }
 
 /// Get the convex hull of a 2D points array, use wrapping method
-inline vec_Vec2f cal_convex_hull(const vec_Vec2f &pts) {
+vec_Vec2f cal_convex_hull(const vec_Vec2f &pts) 
+{
   /// find left most point
   Vec2f p0;
   decimal_t min_x = std::numeric_limits<decimal_t>::infinity();
@@ -278,7 +277,8 @@ inline vec_Vec2f cal_convex_hull(const vec_Vec2f &pts) {
   return vs;
 }
 
-inline Polyhedron2D get_convex_hull(const vec_Vec2f &pts) {
+Polyhedron2D get_convex_hull(const vec_Vec2f &pts) 
+{
   Polyhedron2D poly;
   Vec2f prev_dir(-1, -1);
   for (size_t i = 0; i < pts.size() - 1; i++) {
@@ -294,8 +294,9 @@ inline Polyhedron2D get_convex_hull(const vec_Vec2f &pts) {
 }
 
 /// Minkowski sum, add B to A with center Bc
-inline Polyhedron2D minkowski_sum(const Polyhedron2D &A, const Polyhedron2D &B,
-                                  const Vec2f &Bc) {
+Polyhedron2D minkowski_sum(const Polyhedron2D &A, const Polyhedron2D &B,
+                                  const Vec2f &Bc) 
+{
   const auto A_vertices = cal_vertices(A);
   const auto B_vertices = cal_vertices(B);
 
@@ -307,5 +308,3 @@ inline Polyhedron2D minkowski_sum(const Polyhedron2D &A, const Polyhedron2D &B,
 
   return get_convex_hull(cal_convex_hull(C_vertices));
 }
-
-#endif
