@@ -28,9 +28,10 @@ struct Ellipsoid {
   /// Calculate points inside ellipsoid, non-exclusive
   vec_Vecf<Dim> points_inside(const vec_Vecf<Dim> &O) const {
     vec_Vecf<Dim> new_O;
+    new_O.reserve(O.size());
     for (const auto &it : O) {
       if (inside(it))
-        new_O.push_back(it);
+        new_O.emplace_back(it);
     }
     return new_O;
   }

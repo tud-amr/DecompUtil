@@ -46,6 +46,11 @@
 #define FLOAT_TOL 1e-8
 #endif
 
+#ifndef EPSILON
+#define EPSILON 1e-10
+#endif
+
+
 #ifndef DATA_TYPE_H
 #define DATA_TYPE_H
 /*! \brief Rename the float type used in lib

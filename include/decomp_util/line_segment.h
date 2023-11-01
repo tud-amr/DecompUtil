@@ -38,25 +38,36 @@ class LineSegment : public DecompBase<Dim> {
     /// Get the line
     vec_Vecf<Dim> get_line_segment() const {
       vec_Vecf<Dim> line;
-      line.push_back(p1_);
-      line.push_back(p2_);
+      line.emplace_back(p1_);
+      line.emplace_back(p2_);
       return line;
     }
 
   protected:
     ///Add the bounding box
     void add_local_bbox(Polyhedron<Dim> &Vs) {
-      if(this->local_bbox_.norm() == 0)
-        return;
+      //PROFILE_FUNCTION();
+
+      /**
+       * TODO: norm function equal to zero can be changed to just checking values if they are zero.
+       * else this norm function is really expensive
+      */
+
+      if(this->local_bbox_[0] == 0 && this->local_bbox_[1] == 0)
+      {
+        if(Dim == 2){return;};
+        if(this->local_bbox_[2] == 0){return;};
+      }
       //**** virtual walls parallel to path p1->p2
       Vecf<Dim> dir = (p2_ - p1_).normalized();
       Vecf<Dim> dir_h = Vecf<Dim>::Zero();
       dir_h(0) = dir(1), dir_h(1) = -dir(0);
-      if (dir_h.norm() == 0) {
-        if(Dim == 2)
+      if (dir_h[0] == 0 && dir_h[1] == 0) {
+        if(Dim == 2){
           dir_h << -1, 0;
-        else
+        } else if (dir_h[2] == 0){
           dir_h << -1, 0, 0;
+        }        
       }
       dir_h = dir_h.normalized();
 
@@ -123,7 +134,7 @@ class LineSegment : public DecompBase<Dim> {
           vec_Vecf<Dim> obs_new;
           for(const auto &it: obs_inside) {
             if(1 - E.dist(it) > epsilon_)
-              obs_new.push_back(it);
+              obs_new.emplace_back(it);
           }
           obs_inside = obs_new;
         }

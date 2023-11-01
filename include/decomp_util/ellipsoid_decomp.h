@@ -6,6 +6,7 @@
 #define ELLIPSOID_DECOMP_H
 
 #include <memory>
+#include <thread>
 #include <decomp_util/line_segment.h>
 #include <mpc_tools/instrumentation_timer.h>
 
@@ -132,36 +133,32 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
 
   // Create line segments and corresponding ellipsoids and polyhedrons based on a path with ellipsoidal and circular elements
   unsigned int idx_path = 0;
-  for (unsigned int i = 0; i < n_segments; i++) {
-    // Add line segment
-    {
-      PROFILE_SCOPE("set each line");
 
-      lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
-      {
-        PROFILE_SCOPE("set local boundingbox");
-        lines_[i]->set_local_bbox(local_bbox_);
+  for (unsigned int i = 0; i < n_segments; i++)  {
+    //PROFILE_SCOPE("set it");
+    lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
+    lines_[i]->set_local_bbox(local_bbox_);
+    lines_[i]->set_obs_store(obs_);
 
-      }
-      lines_[i]->set_obs(obs_);
-
-    }
-
-    {
-      PROFILE_SCOPE("dilate line");
-      lines_[i]->dilate(offset_x);
-    }
-
-    
-    {
-      PROFILE_SCOPE("get poly");
-      // Calculate polyhedron
-      ellipsoids_[i] = lines_[i]->get_ellipsoid();
-      polyhedrons_[i] = lines_[i]->get_polyhedron();
-    }
-    // Update idx_path (extra increase in case of circular elements)
     if (is_path_circle_only_) idx_path++;
     idx_path++;
+  }
+
+#pragma omp parallel for num_threads(6)  
+  for (unsigned int i = 0; i < n_segments; i++) {
+    // Add line segment
+    
+    {
+      //PROFILE_SCOPE("set vars line");
+      lines_[i]->set_obs();
+    }
+    {
+      //PROFILE_SCOPE("dilate line");
+      lines_[i]->dilate(offset_x);
+    }
+    // Update idx_path (extra increase in case of circular elements)
+    ellipsoids_[i] = lines_[i]->get_ellipsoid();
+    polyhedrons_[i] = lines_[i]->get_polyhedron();
   }
 
   path_ = path;
@@ -171,6 +168,74 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
       add_global_bbox(it);
   }
 }
+
+
+void calculatePolyhedron(const Vecf<Dim> &local_bbox, const vec_Vecf<Dim> &obs, const vec_Vecf<Dim> &path, const int idx_path, const unsigned int index, const double offset_x = 0)
+{
+  std::shared_ptr<LineSegment<Dim>> lines = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
+  {
+    PROFILE_SCOPE("set vars line");
+    lines->set_local_bbox(local_bbox);
+    lines->set_obs(obs);
+  }
+  {
+    PROFILE_SCOPE("dilate line");
+    lines->dilate(offset_x);
+  }
+  lines_[index] = lines;
+}
+
+//   std::vector<std::thread> function_threads;
+//   function_threads.reserve(n_segments);
+
+//   // Create line segments and corresponding ellipsoids and polyhedrons based on a path with ellipsoidal and circular elements
+//   unsigned int idx_path = 0;
+//   unsigned int k = 0;
+//   for (unsigned int i = 0; i < n_segments; i++) {
+//     // Add line segment
+    
+//     function_threads.emplace_back(std::thread(&EllipsoidDecomp<Dim>::calculatePolyhedron, this, std::ref(local_bbox_), std::ref(obs_), std::ref(path), idx_path, i, offset_x));
+//     k++;
+//     // Update idx_path (extra increase in case of circular elements)
+//     if (is_path_circle_only_) idx_path++;
+//     idx_path++;
+//   }
+//   // now wait for all functions to be ready if there are some left from the loop
+//   for(auto &thread: function_threads)
+//   {
+//     if (thread.joinable()){thread.join();};
+//   }
+
+//   for (unsigned int i = 0; i < n_segments; i++)  {
+//     PROFILE_SCOPE("get poly");
+//     ellipsoids_[i] = lines_[i]->get_ellipsoid();
+//     polyhedrons_[i] = lines_[i]->get_polyhedron();
+//   }
+
+//   path_ = path;
+
+//   if (global_bbox_min_.norm() != 0 || global_bbox_max_.norm() != 0) {
+//     for(auto& it: polyhedrons_)
+//       add_global_bbox(it);
+//   }
+// }
+
+
+// void calculatePolyhedron(const Vecf<Dim> &local_bbox, const vec_Vecf<Dim> &obs, const vec_Vecf<Dim> &path, const int idx_path, const unsigned int index, const double offset_x = 0)
+// {
+//   std::shared_ptr<LineSegment<Dim>> lines = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
+//   {
+//     PROFILE_SCOPE("set vars line");
+//     lines->set_local_bbox(local_bbox);
+//     lines->set_obs(obs);
+//   }
+//   {
+//     PROFILE_SCOPE("dilate line");
+//     lines->dilate(offset_x);
+//   }
+//   lines_[index] = lines;
+// }
+
 
 protected:
  template<int U = Dim>

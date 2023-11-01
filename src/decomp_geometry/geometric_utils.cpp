@@ -211,7 +211,7 @@ vec_E<vec_Vec3f> cal_vertices(const Polyhedron3D &poly)
     vec_Vec2f pts_inside;
     for (const auto &it : pts) {
       Vec3f p = R * Vec3f(it(0), it(1), 0) + t; // convert to world frame
-      if (poly.inside(p))
+      //if (poly.inside(p))
         pts_inside.push_back(it);
     }
 

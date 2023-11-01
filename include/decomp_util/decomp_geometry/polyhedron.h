@@ -8,6 +8,9 @@
 
 #include <decomp_util/decomp_basis/data_type.h>
 
+#include <mpc_tools/instrumentation_timer.h>
+
+
 ///Hyperplane class
 template <int Dim>
 struct Hyperplane {
@@ -15,12 +18,12 @@ struct Hyperplane {
   Hyperplane(const Vecf<Dim>& p, const Vecf<Dim>& n) : p_(p), n_(n) {}
 
   /// Calculate the signed distance from point
-  decimal_t signed_dist(const Vecf<Dim>& pt) const {
+  inline decimal_t signed_dist(const Vecf<Dim>& pt) const {
     return n_.dot(pt - p_);
   }
 
   /// Calculate the distance from point
-  decimal_t dist(const Vecf<Dim>& pt) const {
+  inline decimal_t dist(const Vecf<Dim>& pt) const {
     return std::abs(signed_dist(pt));
   }
 
@@ -34,6 +37,12 @@ struct Hyperplane {
 typedef Hyperplane<2> Hyperplane2D;
 ///Hyperplane3D: first is the point on the hyperplane, second is the normal
 typedef Hyperplane<3> Hyperplane3D;
+
+template <int Dim>
+inline decimal_t signed_dist_hyper(const Vecf<Dim>& pt, const Vecf<Dim>& p, const Vecf<Dim>& n)
+{
+  return n.dot(pt - p);
+}
 
 
 ///Polyhedron class
@@ -51,9 +60,9 @@ struct Polyhedron {
   }
 
   /// Check if the point is inside polyhedron, non-exclusive
-  bool inside(const Vecf<Dim>& pt) const {
-    for (const auto& v : vs_) {
-      if (v.signed_dist(pt) > epsilon_) {
+  inline bool inside(const Vecf<Dim>& pt, const vec_E<Hyperplane<Dim>>& vs) const {
+    for (const auto& v : vs) {
+      if (signed_dist_hyper<Dim>(pt, v.p_, v.n_) > EPSILON) {
         //printf("rejected pt: (%f, %f), d: %f\n",pt(0), pt(1), v.signed_dist(pt));
         return false;
       }
@@ -64,9 +73,10 @@ struct Polyhedron {
   /// Calculate points inside polyhedron, non-exclusive
   vec_Vecf<Dim> points_inside(const vec_Vecf<Dim> &O) const {
     vec_Vecf<Dim> new_O;
+    new_O.reserve(O.size());
     for (const auto &it : O) {
-      if (inside(it))
-        new_O.push_back(it);
+      if (inside(it, vs_))
+        new_O.emplace_back(it);
     }
     return new_O;
   }
@@ -140,17 +150,22 @@ struct LinearConstraint {
 
   /// Calculate points inside polyhedron, non-exclusive
   vec_Vecf<Dim> points_inside(const vec_Vecf<Dim> &O) const {
+    PROFILE_FUNCTION();
+
     vec_Vecf<Dim> new_O;
+    new_O.reserve(O.size());
     for (const auto &it : O) {
-      if (inside(it))
-        new_O.push_back(it);
+      if (inside(it, A_, b_))
+      {
+        new_O.emplace_back(it);
+      }
     }
     return new_O;
   }
 
   /// Check if the point is inside polyhedron using linear constraint
-  bool inside(const Vecf<Dim> &pt) const {
-    VecDf d = A_ * pt - b_;
+  bool inside(const Vecf<Dim> &pt,const MatDNf<Dim> &A,const VecDf &b) const {
+    VecDf d = A * pt - b;
     for (unsigned int i = 0; i < d.rows(); i++) {
       if (d(i) > FLOAT_TOL)
         return false;

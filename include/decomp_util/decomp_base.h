@@ -30,14 +30,18 @@ class DecompBase {
       local_bbox_ = bbox;
     }
 
+    void set_obs_store(const vec_Vecf<Dim> &obs) {
+      obs_ = obs;
+    }
+
     ///Import obstacle points
-    void set_obs(const vec_Vecf<Dim> &obs) {
+    void set_obs() {
       // only consider points inside local bbox
       Polyhedron<Dim> vs;
       add_local_bbox(vs);
       {
-        PROFILE_SCOPE("points_inside");
-        obs_ = vs.points_inside(obs);
+        //PROFILE_SCOPE("points inside");
+        obs_ = vs.points_inside(obs_);
       }
     }
 
@@ -74,7 +78,7 @@ class DecompBase {
         vec_Vecf<Dim> obs_tmp;
         for (const auto &it : obs_remain) {
           if (v.signed_dist(it) < 0)
-            obs_tmp.push_back(it);
+            obs_tmp.emplace_back(it);
         }
         obs_remain = obs_tmp;
         /*
