@@ -143,11 +143,52 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
     if (is_path_circle_only_) idx_path++;
     idx_path++;
   }
+#define THREADING_TEST
+#ifdef THREADING_TEST 
+  {
+    PROFILE_SCOPE("threading");
+  // first determine the start and end positions determined by size and threads
+  int size_section = std::ceil(n_segments/4); 
 
-#pragma omp parallel for num_threads(6)  
+  // then we start the threads each for own section
+  std::vector<std::thread> threads;
+  int start = 0;
+  int end = size_section;
+
+  for (int j = 0; j<4; j++)
+  {
+    threads.emplace_back(std::thread(&EllipsoidDecomp::threadingFunction, this, start, end, offset_x));
+
+    start = start + size_section;
+    if(j == 4-1)
+    {
+      end = n_segments;
+    } else 
+    {
+      end = end + size_section;
+    }
+  }
+  
+  // then we wait for threads to finish
+  for (std::thread &thread : threads)
+  {
+    if(thread.joinable()){thread.join();};
+  }
+
+  
+  }
+  for (unsigned int i = 0; i < n_segments; i++) {
+    ellipsoids_[i] = lines_[i]->get_ellipsoid();
+    polyhedrons_[i] = lines_[i]->get_polyhedron();
+  }
+
+#endif
+
+#ifndef THREADING_TEST
+  {
+    PROFILE_SCOPE("not threading");
   for (unsigned int i = 0; i < n_segments; i++) {
     // Add line segment
-    
     {
       //PROFILE_SCOPE("set vars line");
       lines_[i]->set_obs();
@@ -160,12 +201,35 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
     ellipsoids_[i] = lines_[i]->get_ellipsoid();
     polyhedrons_[i] = lines_[i]->get_polyhedron();
   }
+  }
+#endif
+
+
 
   path_ = path;
 
   if (global_bbox_min_.norm() != 0 || global_bbox_max_.norm() != 0) {
     for(auto& it: polyhedrons_)
       add_global_bbox(it);
+  }
+}
+
+void threadingFunction(int start, int end, double offset_x)
+{
+  PROFILE_FUNCTION();
+  for (unsigned int i = start; i < end; i++) {
+    // Add line segment
+    {
+      //PROFILE_SCOPE("set vars line");
+      lines_[i]->set_obs();
+    }
+    {
+      //PROFILE_SCOPE("dilate line");
+      lines_[i]->dilate(offset_x);
+    }
+    // Update idx_path (extra increase in case of circular elements)
+    //ellipsoids_[i] = lines_[i]->get_ellipsoid();
+    //polyhedrons_[i] = lines_[i]->get_polyhedron();
   }
 }
 
