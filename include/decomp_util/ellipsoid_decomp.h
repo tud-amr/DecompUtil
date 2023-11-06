@@ -160,7 +160,7 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
     threads.emplace_back(std::thread(&EllipsoidDecomp::threadingFunction, this, start, end, offset_x));
 
     start = start + size_section;
-    if(j == 4-1)
+    if(j == 4-2)
     {
       end = n_segments;
     } else 
