@@ -148,26 +148,20 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
   {
     PROFILE_SCOPE("threading");
   // first determine the start and end positions determined by size and threads
-  int size_section = std::ceil(n_segments/4); 
+  int size_section = std::ceil(n_segments/2); 
 
   // then we start the threads each for own section
   std::vector<std::thread> threads;
-  int start = 0;
-  int end = size_section;
+  int start = size_section;
+  int end = n_segments;
 
-  for (int j = 0; j<4; j++)
+  for (int j = 0; j<1; j++)
   {
     threads.emplace_back(std::thread(&EllipsoidDecomp::threadingFunction, this, start, end, offset_x));
-
-    start = start + size_section;
-    if(j == 4-2)
-    {
-      end = n_segments;
-    } else 
-    {
-      end = end + size_section;
-    }
   }
+
+  // Start other part on main thread
+  threadingFunction(0, size_section, offset_x);
   
   // then we wait for threads to finish
   for (std::thread &thread : threads)

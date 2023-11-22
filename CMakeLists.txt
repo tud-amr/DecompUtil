@@ -9,7 +9,7 @@ endif()
 # Compiler definitions, these can be used in the code as #ifdef. You can manage code that needs to be compiled.
 #add_definitions(-DTHREADING_TEST)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=c++11 -Wall -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11 -Wall -Wno-deprecated-declarations")
 
 
 set(BUILD_SHARED_LIBS ON)
