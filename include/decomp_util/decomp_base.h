@@ -40,7 +40,7 @@ class DecompBase {
       Polyhedron<Dim> vs;
       add_local_bbox(vs);
       {
-        //PROFILE_SCOPE("points inside");
+        PROFILE_SCOPE("points inside");
         obs_ = vs.points_inside(obs_);
       }
     }

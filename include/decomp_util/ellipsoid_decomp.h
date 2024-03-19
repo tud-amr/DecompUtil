@@ -8,6 +8,7 @@
 #include <memory>
 #include <thread>
 #include <decomp_util/line_segment.h>
+#include <decomp_util/thread_pool.h>
 #include <mpc_tools/instrumentation_timer.h>
 
 /**
@@ -19,7 +20,9 @@ template <int Dim>
 class EllipsoidDecomp {
 public:
  ///Simple constructor
- EllipsoidDecomp() {}
+ EllipsoidDecomp():
+  thread_pool_(4)
+ {}
  /**
   * @brief Basic constructor
   * @param origin The origin of the global bounding box
@@ -147,27 +150,32 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
 #ifdef THREADING_TEST 
   {
     PROFILE_SCOPE("threading");
-  // first determine the start and end positions determined by size and threads
-  int size_section = std::ceil(n_segments/2); 
+  // // first determine the start and end positions determined by size and threads
+  // int size_section = std::ceil(n_segments/2); 
 
-  // then we start the threads each for own section
-  std::vector<std::thread> threads;
-  int start = size_section;
-  int end = n_segments;
+  // // then we start the threads each for own section
+  // std::vector<std::thread> threads;
+  // int start = size_section;
+  // int end = n_segments;
 
-  for (int j = 0; j<1; j++)
-  {
-    threads.emplace_back(std::thread(&EllipsoidDecomp::threadingFunction, this, start, end, offset_x));
-  }
+  // for (int j = 0; j<1; j++)
+  // {
+  //   threads.emplace_back(std::thread(&EllipsoidDecomp::threadingFunction, this, start, end, offset_x));
+  // }
 
-  // Start other part on main thread
-  threadingFunction(0, size_section, offset_x);
+  // // Start other part on main thread
+  // threadingFunction(0, size_section, offset_x);
   
-  // then we wait for threads to finish
-  for (std::thread &thread : threads)
-  {
-    if(thread.joinable()){thread.join();};
-  }
+  // // then we wait for threads to finish
+  // for (std::thread &thread : threads)
+  // {
+  //   if(thread.joinable()){thread.join();};
+  // }
+    for (unsigned int i = 0; i < n_segments; i++) {
+      thread_pool_.enqueue(std::bind(&EllipsoidDecomp::threadingFunction, this, i, offset_x));
+    }
+
+    thread_pool_.waitUntilFinished();
 
   
   }
@@ -180,7 +188,7 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
 
 #ifndef THREADING_TEST
   {
-    PROFILE_SCOPE("not threading");
+    //PROFILE_SCOPE("not threading");
   for (unsigned int i = 0; i < n_segments; i++) {
     // Add line segment
     {
@@ -192,8 +200,8 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
       lines_[i]->dilate(offset_x);
     }
     // Update idx_path (extra increase in case of circular elements)
-    ellipsoids_[i] = lines_[i]->get_ellipsoid();
-    polyhedrons_[i] = lines_[i]->get_polyhedron();
+    //ellipsoids_[i] = lines_[i]->get_ellipsoid();
+    //polyhedrons_[i] = lines_[i]->get_polyhedron();
   }
   }
 #endif
@@ -208,25 +216,24 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
   }
 }
 
-void threadingFunction(int start, int end, double offset_x)
+void threadingFunction(int i, double offset_x)
 {
   PROFILE_FUNCTION();
-  for (unsigned int i = start; i < end; i++) {
-    // Add line segment
-    {
-      //PROFILE_SCOPE("set vars line");
-      lines_[i]->set_obs();
-    }
-    {
-      //PROFILE_SCOPE("dilate line");
-      lines_[i]->dilate(offset_x);
-    }
+  {
+    //PROFILE_SCOPE("set vars line");
+    lines_[i]->set_obs();
+  }
+  {
+    //PROFILE_SCOPE("dilate line");
+    lines_[i]->dilate(offset_x);
+  }
     // Update idx_path (extra increase in case of circular elements)
     //ellipsoids_[i] = lines_[i]->get_ellipsoid();
     //polyhedrons_[i] = lines_[i]->get_polyhedron();
-  }
-}
 
+  // Notify main thread that task is done
+  thread_pool_.taskDone();
+}
 
 void calculatePolyhedron(const Vecf<Dim> &local_bbox, const vec_Vecf<Dim> &obs, const vec_Vecf<Dim> &path, const int idx_path, const unsigned int index, const double offset_x = 0)
 {
@@ -336,6 +343,8 @@ protected:
  Vecf<Dim> local_bbox_{Vecf<Dim>::Zero()};
  Vecf<Dim> global_bbox_min_{Vecf<Dim>::Zero()}; // bounding box params
  Vecf<Dim> global_bbox_max_{Vecf<Dim>::Zero()};
+
+ ThreadPool thread_pool_;
 
 };
 
