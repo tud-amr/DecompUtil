@@ -7,8 +7,8 @@
 #include <iostream> 
 #include <mutex> 
 #include <queue> 
-#include <thread> 
-using namespace std; 
+#include <vector>
+#include <thread>  
   
 // Class that represents a simple thread pool 
 class ThreadPool { 
@@ -16,14 +16,14 @@ public:
     // // Constructor to creates a thread pool with given 
     // number of threads 
     ThreadPool(size_t num_threads 
-               = thread::hardware_concurrency()) 
+               = std::thread::hardware_concurrency()) 
     { 
   
         // Creating worker threads 
         for (size_t i = 0; i < num_threads; ++i) { 
             threads_.emplace_back([this] { 
                 while (true) { 
-                    function<void()> task; 
+                    std::function<void()> task; 
                     // The reason for putting the below code 
                     // here is to unlock the queue before 
                     // executing the task so that other 
@@ -31,7 +31,7 @@ public:
                     { 
                         // Locking the queue so that data 
                         // can be shared safely 
-                        unique_lock<mutex> lock( 
+                        std::unique_lock<std::mutex> lock( 
                             queue_mutex_); 
   
                         // Waiting until there is a task to 
@@ -47,7 +47,7 @@ public:
                         } 
   
                         // Get the next task from the queue 
-                        task = move(tasks_.front()); 
+                        task = std::move(tasks_.front()); 
                         tasks_.pop(); 
                     } 
   
@@ -62,7 +62,7 @@ public:
     { 
         { 
             // Lock the queue to update the stop flag safely 
-            unique_lock<mutex> lock(queue_mutex_); 
+            std::unique_lock<std::mutex> lock(queue_mutex_); 
             stop_ = true; 
         } 
   
@@ -77,54 +77,54 @@ public:
     } 
   
     // Enqueue task for execution by the thread pool 
-    void enqueue(function<void()> task) 
+    void enqueue(std::function<void()> task) 
     { 
         {
-            lock_guard<mutex> lock(task_count_mutex_);
+            std::lock_guard<std::mutex> lock(task_count_mutex_);
             ++number_of_tasks;  // increase number of pending tasks
         }
         { 
-            unique_lock<mutex> lock(queue_mutex_); 
-            tasks_.emplace(move(task)); 
+            std::unique_lock<std::mutex> lock(queue_mutex_); 
+            tasks_.emplace(std::move(task)); 
         } 
         cv_.notify_one(); 
     } 
 
     void taskDone() 
     {
-        lock_guard<mutex> lock(task_count_mutex_);
+        std::lock_guard<std::mutex> lock(task_count_mutex_);
         --number_of_tasks;  // decrease number of pending tasks 
         task_cv_.notify_one();  // poke the main thread to wake it up
     }
 
     void waitUntilFinished()
     {
-        unique_lock<mutex> lock(task_count_mutex_);
+        std::unique_lock<std::mutex> lock(task_count_mutex_);
         task_cv_.wait( lock, [&] () { return (number_of_tasks <= 0); } );
     }
   
 private: 
     // Vector to store worker threads 
-    vector<thread> threads_; 
+    std::vector<std::thread> threads_; 
   
     // Queue of tasks 
-    queue<function<void()> > tasks_; 
+    std::queue<std::function<void()> > tasks_; 
 
     // Number of tasks in queue and being executed
     int number_of_tasks = 0;
   
     // Mutex to synchronize access to shared data 
-    mutex queue_mutex_; 
+    std::mutex queue_mutex_; 
 
     // Mutex to synchronize access to the number of tasks
-    mutex task_count_mutex_;
+    std::mutex task_count_mutex_;
   
     // Condition variable to signal changes in the state of 
     // the tasks queue 
-    condition_variable cv_; 
+    std::condition_variable cv_; 
 
     // Condition variable to signal changes in state of the number of tasks finished
-    condition_variable task_cv_;
+    std::condition_variable task_cv_;
   
     // Flag to indicate whether the thread pool should stop 
     // or not 
