@@ -123,7 +123,7 @@ public:
 * @param offset_x Offset added to the long semi-axis, default is 0
 * @param is_path_circle Indicator that path only consists of sets of two path elements giving line segments, so line segments are not constructed between every path segment
 */
-void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_only = false) {
+void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vecf<Dim>>> &obs_path_points, double offset_x = 0, bool is_path_circle_only = false) {
   is_path_circle_only_ = is_path_circle_only;
   PROFILE_FUNCTION();
   const unsigned int n_path = path.size();
@@ -141,7 +141,7 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
     //PROFILE_SCOPE("set it");
     lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
     lines_[i]->set_local_bbox(local_bbox_);
-    lines_[i]->set_obs_store(obs_);
+    //lines_[i]->set_obs_store(obs_path_points[i].get());
 
     if (is_path_circle_only_) idx_path++;
     idx_path++;
@@ -150,35 +150,16 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
 #ifdef THREADING_TEST 
   {
     PROFILE_SCOPE("threading");
-  // // first determine the start and end positions determined by size and threads
-  // int size_section = std::ceil(n_segments/2); 
 
-  // // then we start the threads each for own section
-  // std::vector<std::thread> threads;
-  // int start = size_section;
-  // int end = n_segments;
-
-  // for (int j = 0; j<1; j++)
-  // {
-  //   threads.emplace_back(std::thread(&EllipsoidDecomp::threadingFunction, this, start, end, offset_x));
-  // }
-
-  // // Start other part on main thread
-  // threadingFunction(0, size_section, offset_x);
-  
-  // // then we wait for threads to finish
-  // for (std::thread &thread : threads)
-  // {
-  //   if(thread.joinable()){thread.join();};
-  // }
     for (unsigned int i = 0; i < n_segments; i++) {
-      thread_pool_.enqueue(std::bind(&EllipsoidDecomp::threadingFunction, this, i, offset_x));
+      thread_pool_.enqueue(std::bind(&EllipsoidDecomp::threadingFunction, this, i, obs_path_points[i].get(), offset_x));
     }
 
     thread_pool_.waitUntilFinished();
 
   
   }
+
   for (unsigned int i = 0; i < n_segments; i++) {
     ellipsoids_[i] = lines_[i]->get_ellipsoid();
     polyhedrons_[i] = lines_[i]->get_polyhedron();
@@ -193,7 +174,7 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
     // Add line segment
     {
       //PROFILE_SCOPE("set vars line");
-      lines_[i]->set_obs();
+      lines_[i]->set_obs(obs_path_points[i].get());
     }
     {
       //PROFILE_SCOPE("dilate line");
@@ -216,12 +197,12 @@ void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_
   }
 }
 
-void threadingFunction(int i, double offset_x)
+void threadingFunction(const int i, const vec_Vecf<Dim>* obs, const double offset_x)
 {
   PROFILE_FUNCTION();
   {
     //PROFILE_SCOPE("set vars line");
-    lines_[i]->set_obs();
+    lines_[i]->set_obs(obs);
   }
   {
     //PROFILE_SCOPE("dilate line");

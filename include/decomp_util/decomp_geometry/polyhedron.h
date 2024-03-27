@@ -71,6 +71,17 @@ struct Polyhedron {
   }
 
   /// Calculate points inside polyhedron, non-exclusive
+  vec_Vecf<Dim> points_inside(const vec_Vecf<Dim>* O) const {
+    vec_Vecf<Dim> new_O;
+    new_O.reserve(O->size());
+    for (const auto &it : *O) {
+      if (inside(it, vs_))
+        new_O.emplace_back(it);
+    }
+    return new_O;
+  }
+
+  /// Calculate points inside polyhedron, non-exclusive
   vec_Vecf<Dim> points_inside(const vec_Vecf<Dim> &O) const {
     vec_Vecf<Dim> new_O;
     new_O.reserve(O.size());
