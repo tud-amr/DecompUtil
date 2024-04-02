@@ -21,7 +21,7 @@ class EllipsoidDecomp {
 public:
  ///Simple constructor
  EllipsoidDecomp():
-  thread_pool_(4)
+  thread_pool_(2)
  {}
  /**
   * @brief Basic constructor
@@ -146,7 +146,7 @@ void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vec
     if (is_path_circle_only_) idx_path++;
     idx_path++;
   }
-#define THREADING_TEST
+//#define THREADING_TEST
 #ifdef THREADING_TEST 
   {
     PROFILE_SCOPE("threading");
@@ -181,8 +181,8 @@ void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vec
       lines_[i]->dilate(offset_x);
     }
     // Update idx_path (extra increase in case of circular elements)
-    //ellipsoids_[i] = lines_[i]->get_ellipsoid();
-    //polyhedrons_[i] = lines_[i]->get_polyhedron();
+    ellipsoids_[i] = lines_[i]->get_ellipsoid();
+    polyhedrons_[i] = lines_[i]->get_polyhedron();
   }
   }
 #endif
