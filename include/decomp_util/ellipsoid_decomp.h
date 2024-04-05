@@ -8,8 +8,12 @@
 #include <memory>
 #include <thread>
 #include <decomp_util/line_segment.h>
-#include <decomp_util/thread_pool.h>
 #include <mpc_tools/instrumentation_timer.h>
+
+#ifdef THREADING
+#pragma message("Using threading")
+#include <decomp_util/thread_pool.h>
+#endif
 
 /**
  * @brief EllipsoidDecomp Class
@@ -20,9 +24,22 @@ template <int Dim>
 class EllipsoidDecomp {
 public:
  ///Simple constructor
- EllipsoidDecomp():
-  thread_pool_(4)
- {}
+ 
+#ifdef THREADING
+  EllipsoidDecomp(const int n_threads = 2):
+   thread_pool_(n_threads)
+  {
+    std::cerr << "Threading is enabled. Please disable THREADING in CMakeLists.txt" << std::endl;
+  }
+#endif
+#ifndef THREADING
+  EllipsoidDecomp()
+  {
+    std::cerr << "Threading is not enabled. Please enable THREADING in CMakeLists.txt" << std::endl;
+  }
+#endif
+
+
  /**
   * @brief Basic constructor
   * @param origin The origin of the global bounding box
@@ -120,6 +137,7 @@ public:
 /**
 * @brief Decomposition thread
 * @param path The path to dilate
+* @param obs_path_points The obstacle points for each path segment
 * @param offset_x Offset added to the long semi-axis, default is 0
 * @param is_path_circle Indicator that path only consists of sets of two path elements giving line segments, so line segments are not constructed between every path segment
 */
@@ -136,18 +154,16 @@ void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vec
 
   // Create line segments and corresponding ellipsoids and polyhedrons based on a path with ellipsoidal and circular elements
   unsigned int idx_path = 0;
-
   for (unsigned int i = 0; i < n_segments; i++)  {
-    //PROFILE_SCOPE("set it");
     lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
     lines_[i]->set_local_bbox(local_bbox_);
-    //lines_[i]->set_obs_store(obs_path_points[i].get());
 
     if (is_path_circle_only_) idx_path++;
     idx_path++;
   }
-#define THREADING_TEST
-#ifdef THREADING_TEST 
+
+// #define THREADING_TEST
+#ifdef THREADING 
   {
     PROFILE_SCOPE("threading");
 
@@ -155,39 +171,34 @@ void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vec
       thread_pool_.enqueue(std::bind(&EllipsoidDecomp::threadingFunction, this, i, obs_path_points[i].get(), offset_x));
     }
 
+    // Wait for all threads to finish
     thread_pool_.waitUntilFinished();
-
-  
   }
 
-  for (unsigned int i = 0; i < n_segments; i++) {
-    ellipsoids_[i] = lines_[i]->get_ellipsoid();
-    polyhedrons_[i] = lines_[i]->get_polyhedron();
-  }
-
-#endif
-
-#ifndef THREADING_TEST
   {
-    //PROFILE_SCOPE("not threading");
-  for (unsigned int i = 0; i < n_segments; i++) {
-    // Add line segment
-    {
-      //PROFILE_SCOPE("set vars line");
-      lines_[i]->set_obs(obs_path_points[i].get());
+    PROFILE_SCOPE("after thread");
+    // Create ellipsoids and polyhedrons
+    for (unsigned int i = 0; i < n_segments; i++) {
+      ellipsoids_[i] = lines_[i]->get_ellipsoid();
+      polyhedrons_[i] = lines_[i]->get_polyhedron();
     }
-    {
-      //PROFILE_SCOPE("dilate line");
-      lines_[i]->dilate(offset_x);
-    }
-    // Update idx_path (extra increase in case of circular elements)
-    //ellipsoids_[i] = lines_[i]->get_ellipsoid();
-    //polyhedrons_[i] = lines_[i]->get_polyhedron();
   }
+    
+
+#endif
+#ifndef THREADING
+  {
+    PROFILE_SCOPE("no threading");
+    for (unsigned int i = 0; i < n_segments; i++) 
+    {
+      lines_[i]->set_obs(obs_path_points[i].get());
+      lines_[i]->dilate(offset_x);
+
+      ellipsoids_[i] = lines_[i]->get_ellipsoid();
+      polyhedrons_[i] = lines_[i]->get_polyhedron();
+    }
   }
 #endif
-
-
 
   path_ = path;
 
@@ -197,24 +208,16 @@ void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vec
   }
 }
 
+#ifdef THREADING
 void threadingFunction(const int i, const vec_Vecf<Dim>* obs, const double offset_x)
 {
   PROFILE_FUNCTION();
-  {
-    //PROFILE_SCOPE("set vars line");
-    lines_[i]->set_obs(obs);
-  }
-  {
-    //PROFILE_SCOPE("dilate line");
-    lines_[i]->dilate(offset_x);
-  }
-    // Update idx_path (extra increase in case of circular elements)
-    //ellipsoids_[i] = lines_[i]->get_ellipsoid();
-    //polyhedrons_[i] = lines_[i]->get_polyhedron();
+  lines_[i]->set_obs(obs);
+  lines_[i]->dilate(offset_x);
 
-  // Notify main thread that task is done
   thread_pool_.taskDone();
 }
+#endif
 
 void calculatePolyhedron(const Vecf<Dim> &local_bbox, const vec_Vecf<Dim> &obs, const vec_Vecf<Dim> &path, const int idx_path, const unsigned int index, const double offset_x = 0)
 {
@@ -230,57 +233,6 @@ void calculatePolyhedron(const Vecf<Dim> &local_bbox, const vec_Vecf<Dim> &obs, 
   }
   lines_[index] = lines;
 }
-
-//   std::vector<std::thread> function_threads;
-//   function_threads.reserve(n_segments);
-
-//   // Create line segments and corresponding ellipsoids and polyhedrons based on a path with ellipsoidal and circular elements
-//   unsigned int idx_path = 0;
-//   unsigned int k = 0;
-//   for (unsigned int i = 0; i < n_segments; i++) {
-//     // Add line segment
-    
-//     function_threads.emplace_back(std::thread(&EllipsoidDecomp<Dim>::calculatePolyhedron, this, std::ref(local_bbox_), std::ref(obs_), std::ref(path), idx_path, i, offset_x));
-//     k++;
-//     // Update idx_path (extra increase in case of circular elements)
-//     if (is_path_circle_only_) idx_path++;
-//     idx_path++;
-//   }
-//   // now wait for all functions to be ready if there are some left from the loop
-//   for(auto &thread: function_threads)
-//   {
-//     if (thread.joinable()){thread.join();};
-//   }
-
-//   for (unsigned int i = 0; i < n_segments; i++)  {
-//     PROFILE_SCOPE("get poly");
-//     ellipsoids_[i] = lines_[i]->get_ellipsoid();
-//     polyhedrons_[i] = lines_[i]->get_polyhedron();
-//   }
-
-//   path_ = path;
-
-//   if (global_bbox_min_.norm() != 0 || global_bbox_max_.norm() != 0) {
-//     for(auto& it: polyhedrons_)
-//       add_global_bbox(it);
-//   }
-// }
-
-
-// void calculatePolyhedron(const Vecf<Dim> &local_bbox, const vec_Vecf<Dim> &obs, const vec_Vecf<Dim> &path, const int idx_path, const unsigned int index, const double offset_x = 0)
-// {
-//   std::shared_ptr<LineSegment<Dim>> lines = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
-//   {
-//     PROFILE_SCOPE("set vars line");
-//     lines->set_local_bbox(local_bbox);
-//     lines->set_obs(obs);
-//   }
-//   {
-//     PROFILE_SCOPE("dilate line");
-//     lines->dilate(offset_x);
-//   }
-//   lines_[index] = lines;
-// }
 
 
 protected:
@@ -325,7 +277,9 @@ protected:
  Vecf<Dim> global_bbox_min_{Vecf<Dim>::Zero()}; // bounding box params
  Vecf<Dim> global_bbox_max_{Vecf<Dim>::Zero()};
 
+#ifdef THREADING
  ThreadPool thread_pool_;
+#endif
 
 };
 

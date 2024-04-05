@@ -9,7 +9,24 @@ endif()
 # Compiler definitions, these can be used in the code as #ifdef. You can manage code that needs to be compiled.
 #add_definitions(-DTHREADING_TEST)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11 -Wall -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14 -Wall -Wno-deprecated-declarations")
+
+
+# Determine if you want to use threading or not on the dilate function for each segment
+set(THREADING FALSE)
+
+
+
+
+
+if (THREADING)
+  add_definitions(-DTHREADING)
+  message(... "Using threads in the decomp dilate function!" ...)
+  message(... "If your occupied positions vector is small, set threading to false" ...)
+else()
+  message(... "Not using threads in the decomp dilate function" ...)
+endif()
+
 
 
 set(BUILD_SHARED_LIBS ON)

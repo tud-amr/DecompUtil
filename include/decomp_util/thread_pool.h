@@ -80,10 +80,18 @@ public:
     void enqueue(std::function<void()> task) 
     { 
         {
+            // Scoped lock to update the number of tasks
             std::lock_guard<std::mutex> lock(task_count_mutex_);
             ++number_of_tasks;  // increase number of pending tasks
         }
+        // Create a new function that executes the task and then calls taskDone
+        // auto task_with_done = [this, captured_task = std::move(task)]() {
+        //     captured_task();
+        //     this->taskDone();
+        // };
+
         { 
+            // Scoped lock to add task to the queue
             std::unique_lock<std::mutex> lock(queue_mutex_); 
             tasks_.emplace(std::move(task)); 
         } 
