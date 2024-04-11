@@ -124,6 +124,7 @@ public:
 * @param offset_x Offset added to the long semi-axis, default is 0
 * @param is_path_circle Indicator that path only consists of sets of two path elements giving line segments, so line segments are not constructed between every path segment
 */
+#ifndef DECOMP_OLD
 void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vecf<Dim>>> &obs_path_points, double offset_x = 0, bool is_path_circle_only = false) {
   PROFILE_FUNCTION();
     
@@ -157,6 +158,42 @@ void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vec
       add_global_bbox(it);
   }
 }
+#endif
+#ifdef DECOMP_OLD
+void dilate(const vec_Vecf<Dim> &path, double offset_x = 0, bool is_path_circle_only = false) {
+  PROFILE_FUNCTION();
+    
+  is_path_circle_only_ = is_path_circle_only;
+  const unsigned int n_path = path.size();
+  unsigned int n_segments = n_path-1;
+  if (is_path_circle_only_) n_segments = n_path/2;
+
+  lines_.resize(n_segments);
+  ellipsoids_.resize(n_segments);
+  polyhedrons_.resize(n_segments);
+
+  // Create line segments and corresponding ellipsoids and polyhedrons based on a path with ellipsoidal and circular elements
+  unsigned int idx_path = 0;
+  for (unsigned int i = 0; i < n_segments; i++)  {
+    lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
+    lines_[i]->set_local_bbox(local_bbox_);
+    lines_[i]->set_obs(obs_);
+    lines_[i]->dilate(offset_x);
+    ellipsoids_[i] = lines_[i]->get_ellipsoid();
+    polyhedrons_[i] = lines_[i]->get_polyhedron();
+
+    if (is_path_circle_only_) idx_path++;
+    idx_path++;
+  }
+
+  path_ = path;
+
+  if (global_bbox_min_.norm() != 0 || global_bbox_max_.norm() != 0) {
+    for(auto& it: polyhedrons_)
+      add_global_bbox(it);
+  }
+}
+#endif
 
 void calculatePolyhedron(const Vecf<Dim> &local_bbox, const vec_Vecf<Dim> &obs, const vec_Vecf<Dim> &path, const int idx_path, const unsigned int index, const double offset_x = 0)
 {
@@ -215,10 +252,6 @@ protected:
  Vecf<Dim> local_bbox_{Vecf<Dim>::Zero()};
  Vecf<Dim> global_bbox_min_{Vecf<Dim>::Zero()}; // bounding box params
  Vecf<Dim> global_bbox_max_{Vecf<Dim>::Zero()};
-
-#ifdef THREADING
- ThreadPool thread_pool_;
-#endif
 
 };
 

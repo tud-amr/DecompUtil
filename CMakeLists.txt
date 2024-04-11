@@ -8,12 +8,12 @@ endif()
 
 
 
-set(OLD_DECOMP FALSE)
+set(DECOMP_OLD FALSE)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-if(OLD_DECOMP)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O3 -Wno-deprecated-declarations")
-  add_definitions(-DOLD_DECOMP)
+if(DECOMP_OLD)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wno-deprecated-declarations")
+  add_definitions(-DDECOMP_OLD)
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -O3 -fno-math-errno -fno-trapping-math -DNDEBUG -Wno-deprecated-declarations")
 endif()  

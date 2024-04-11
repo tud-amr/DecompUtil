@@ -41,6 +41,15 @@ class DecompBase {
       obs_ = obs_temp;
 
     }
+    void set_obs(const vec_Vecf<Dim> &obs) {
+      // only consider points inside local bbox
+      Polyhedron<Dim> vs;
+      add_local_bbox(vs);
+      {
+        PROFILE_SCOPE("points_inside");
+        obs_ = vs.points_inside(obs);
+      }
+    }
 
     ///Import obstacle points
     void set_obs(const vec_Vecf<Dim>* obs) {
