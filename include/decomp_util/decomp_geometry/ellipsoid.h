@@ -13,15 +13,15 @@
 template <int Dim>
 struct Ellipsoid {
   Ellipsoid() {}
-  Ellipsoid(const Matf<Dim, Dim>& C, const Vecf<Dim>& d) : C_(C), d_(d) {}
+  Ellipsoid(const Matf<Dim, Dim>& C, const Vecf<Dim>& d) : C_(C), d_(d), C_inv_(C.inverse()) {}
 
   /// Calculate distance to the center
-  decimal_t dist(const Vecf<Dim>& pt) const {
-    return (C_.inverse() * (pt - d_)).norm();
+  inline decimal_t dist(const Vecf<Dim>& pt) const {
+    return (C_inv_ * (pt - d_)).norm();
   }
 
   /// Check if the point is inside, non-exclusive
-  bool inside(const Vecf<Dim>& pt) const {
+  inline bool inside(const Vecf<Dim>& pt) const {
       return dist(pt) <= 1;
   }
 
@@ -53,7 +53,7 @@ struct Ellipsoid {
   ///Find the closest hyperplane from the closest point
   Hyperplane<Dim> closest_hyperplane(const vec_Vecf<Dim> &O) const {
     const auto closest_pt = closest_point(O);
-    const auto n = C_.inverse() * C_.inverse().transpose() *
+    const auto n = C_inv_ * C_inv_.transpose() *
       (closest_pt - d_);
     return Hyperplane<Dim>(closest_pt, n.normalized());
   }
@@ -93,6 +93,7 @@ struct Ellipsoid {
   }
 
   Matf<Dim, Dim> C_;
+  Matf<Dim, Dim> C_inv_;
   Vecf<Dim> d_;
 };
 

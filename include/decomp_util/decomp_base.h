@@ -89,10 +89,6 @@ class DecompBase {
             obs_tmp.emplace_back(it);
         }
         obs_remain = obs_tmp;
-        /*
-           std::cout << "a: " << a.transpose() << std::endl;
-           std::cout << "b: " << b << std::endl;
-           */
       }
 
       polyhedron_ = Vs;

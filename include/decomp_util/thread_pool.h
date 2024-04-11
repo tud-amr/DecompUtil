@@ -9,7 +9,14 @@
 #include <queue> 
 #include <vector>
 #include <thread>  
-  
+
+
+/**
+ * @brief to call this function
+ * thread_pool_.enqueue(std::bind(&EllipsoidDecomp::threadingFunction, this, i, obs_path_points[i].get(), offset_x));
+ * 
+ */
+
 // Class that represents a simple thread pool 
 class ThreadPool { 
 public: 

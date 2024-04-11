@@ -6,28 +6,17 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-# Compiler definitions, these can be used in the code as #ifdef. You can manage code that needs to be compiled.
-#add_definitions(-DTHREADING_TEST)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14 -Wall -Wno-deprecated-declarations")
 
 
-# Determine if you want to use threading or not on the dilate function for each segment
-set(THREADING FALSE)
+set(OLD_DECOMP FALSE)
 
-
-
-
-
-if (THREADING)
-  add_definitions(-DTHREADING)
-  message(... "Using threads in the decomp dilate function!" ...)
-  message(... "If your occupied positions vector is small, set threading to false" ...)
+## Compile as C++11, supported in ROS Kinetic and newer
+if(OLD_DECOMP)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O3 -Wno-deprecated-declarations")
+  add_definitions(-DOLD_DECOMP)
 else()
-  message(... "Not using threads in the decomp dilate function" ...)
-endif()
-
-
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -O3 -fno-math-errno -fno-trapping-math -DNDEBUG -Wno-deprecated-declarations")
+endif()  
 
 set(BUILD_SHARED_LIBS ON)
 
