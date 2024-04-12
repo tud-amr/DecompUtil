@@ -13,7 +13,7 @@
 template <int Dim>
 struct Ellipsoid {
   Ellipsoid() {}
-  Ellipsoid(const Matf<Dim, Dim>& C, const Vecf<Dim>& d) : C_(C), d_(d), C_inv_(C.inverse()) {}
+  Ellipsoid(const Matf<Dim, Dim>& C, const Vecf<Dim>& d) : C_(C), C_inv_(C.inverse()), d_(d) {}
 
   /// Calculate distance to the center
   inline decimal_t dist(const Vecf<Dim>& pt) const {
