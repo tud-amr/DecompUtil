@@ -142,7 +142,7 @@ void dilate(const vec_Vecf<Dim> &path, const std::vector<std::unique_ptr<vec_Vec
   for (unsigned int i = 0; i < n_segments; i++)  {
     lines_[i] = std::make_shared<LineSegment<Dim>>(path[idx_path], path[idx_path+1]);
     lines_[i]->set_local_bbox(local_bbox_);
-    lines_[i]->set_obs(obs_path_points[i].get());
+    lines_[i]->set_obs_ptr(obs_path_points[i].get());
     lines_[i]->dilate(offset_x);
     ellipsoids_[i] = lines_[i]->get_ellipsoid();
     polyhedrons_[i] = lines_[i]->get_polyhedron();
