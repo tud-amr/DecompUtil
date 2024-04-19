@@ -6,17 +6,16 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
+# Compile options
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wno-deprecated-declarations -O3")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wno-deprecated-declarations") # without optimization
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -O3 -fno-math-errno -fno-trapping-math -DNDEBUG -Wno-deprecated-declarations") # previously used
 
-
+# To use a pre-processed map (DECOMP_OLD=FALSE) or not (DECOMP_OLD=TRUE)
 set(DECOMP_OLD FALSE)
-
-## Compile as C++11, supported in ROS Kinetic and newer
 if(DECOMP_OLD)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wno-deprecated-declarations")
   add_definitions(-DDECOMP_OLD)
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -O3 -fno-math-errno -fno-trapping-math -DNDEBUG -Wno-deprecated-declarations")
-endif()  
+endif()
 
 set(BUILD_SHARED_LIBS ON)
 
