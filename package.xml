@@ -5,6 +5,8 @@
   <description>The decomp_util package</description>
 
   <maintainer email="sikang@seas.upenn.edu">sikang</maintainer>
+  <author>Dennis Benders</author>
+  <author>Thijs Niesten</author>
 
   <license>BSD 3-Clause</license>
 
