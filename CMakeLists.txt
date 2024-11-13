@@ -92,8 +92,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
 
-  # Sometimes need to tell cmake the language we are using
-#set_target_properties(lmpcc_solver_lib PROPERTIES LINKER_LANGUAGE CXX)
 # add_executable(test_seed_decomp test/test_seed_decomp.cpp)
 # target_link_libraries(test_seed_decomp ${Boost_LIBRARIES})
 # add_test(test_seed_decomp test_seed_decomp)
